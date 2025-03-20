@@ -7,6 +7,7 @@ const dotenv = require('dotenv');
 const textToSpeech = require('@google-cloud/text-to-speech');
 const { Server } = require('socket.io');
 const cors = require('cors'); // Import CORS
+const base64 = require('base-64'); // Import the base64 library to decode the base64 string
 
 dotenv.config(); // Load environment variables from .env file
 
@@ -20,6 +21,21 @@ app.use(cors({
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type'],
 }));
+
+// Decode the base64-encoded Google credentials from the environment variable
+const googleCredentialsBase64 = process.env.GOOGLE_CREDENTIALS_BASE64;
+if (googleCredentialsBase64) {
+  const decodedCredentials = base64.decode(googleCredentialsBase64);
+
+  // Write the decoded credentials to a temporary file
+  const googleCredentialsPath = path.join(__dirname, 'google-service-account-key.json');
+  fs.writeFileSync(googleCredentialsPath, decodedCredentials, 'utf8');
+
+  // Set the GOOGLE_APPLICATION_CREDENTIALS environment variable to the file path
+  process.env.GOOGLE_APPLICATION_CREDENTIALS = googleCredentialsPath;
+} else {
+  console.error('No Google credentials found in environment variables.');
+}
 
 // Set up OpenAI API client
 const openai = new OpenAI({
