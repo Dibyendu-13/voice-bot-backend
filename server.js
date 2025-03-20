@@ -17,11 +17,15 @@ const port = process.env.PORT || 5001;
 
 // Enable CORS for the frontend URL (Netlify) and allow credentials
 app.use(cors({
-  origin: 'https://voice-bot13.netlify.app',  // Your frontend URL here
+  origin: [
+    'http://localhost:3000',  // Local frontend URL
+    'https://voice-bot13.netlify.app',  // Deployed frontend URL
+  ],
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type'],
   credentials: true,  // Allow credentials (cookies)
 }));
+
 
 const googleCredentialsBase64 = process.env.GOOGLE_CREDENTIALS_BASE64;
 
@@ -59,12 +63,16 @@ const server = app.listen(port, () => {
 // Set up Socket.IO with CORS configuration
 const io = new Server(server, {
   cors: {
-    origin: 'https://voice-bot13.netlify.app',  // Your frontend URL here
+    origin: [
+      'http://localhost:3000',  // Local frontend URL for development
+      'https://voice-bot13.netlify.app',  // Deployed frontend URL
+    ],
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type'],
-    credentials: true,  // Allow credentials (cookies) to be sent if necessary
+    credentials: true,  // Allow credentials (cookies)
   },
 });
+
 
 // Paths to the two PDF files
 const pdfPath1 = path.join(__dirname, 'files/sample1.pdf'); // Replace with your actual PDF file path
