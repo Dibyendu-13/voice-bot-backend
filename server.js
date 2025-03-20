@@ -22,16 +22,22 @@ app.use(cors({
   allowedHeaders: ['Content-Type'],
 }));
 
-// Decode the base64-encoded Google credentials from the environment variable
 const googleCredentialsBase64 = process.env.GOOGLE_CREDENTIALS_BASE64;
+
 if (googleCredentialsBase64) {
+  // Define the path where the Google credentials will be stored temporarily
+  const googleCredentialsPath = path.join(__dirname, 'google-credentials.json');
+  
+  // Decode the base64 credentials into the actual JSON content
   const decodedCredentials = base64.decode(googleCredentialsBase64);
 
-  // Write the decoded credentials to a temporary file
+  // Write the decoded credentials to a temporary file (google-credentials.json)
   fs.writeFileSync(googleCredentialsPath, decodedCredentials, 'utf8');
 
   // Set the GOOGLE_APPLICATION_CREDENTIALS environment variable to the file path
   process.env.GOOGLE_APPLICATION_CREDENTIALS = googleCredentialsPath;
+
+  console.log('Google credentials saved successfully.');
 } else {
   console.error('No Google credentials found in environment variables.');
 }
