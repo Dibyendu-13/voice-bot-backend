@@ -13,7 +13,7 @@ dotenv.config(); // Load environment variables from .env file
 
 // Initialize Express app
 const app = express();
-const port = 5001;
+const port = process.env.PORT || 5001;  
 
 // Enable CORS for all origins (you can customize it based on your frontend's URL)
 app.use(cors());
@@ -34,7 +34,7 @@ const server = app.listen(port, () => {
 // Set up Socket.io with CORS configuration
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000",  // Your frontend URL here
+    origin: "https://voice-bot13.netlify.app/",  // Your frontend URL here
     methods: ["GET", "POST"]
   }
 });
