@@ -1,4 +1,3 @@
-// Import required modules
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -19,6 +18,7 @@ const port = process.env.PORT || 5001;
 app.use(cors({
   origin: 'https://voice-bot13.netlify.app',  // Your frontend URL here
   methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type'],
 }));
 
 // Set up OpenAI API client
@@ -39,23 +39,19 @@ const io = new Server(server, {
   cors: {
     origin: 'https://voice-bot13.netlify.app',  // Your frontend URL here
     methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type'],
   },
 });
 
-// Paths to the two PDF files - Adjust as needed or set in environment variables
+// Paths to the two PDF files
 const pdfPath1 = path.join(__dirname, 'files/sample1.pdf'); // Replace with your actual PDF file path
 const pdfPath2 = path.join(__dirname, 'files/sample2.pdf'); // Replace with your actual PDF file path
 
 // Helper function to preprocess PDF
 const preprocessPDF = async (pdfPath) => {
-  try {
-    const dataBuffer = fs.readFileSync(pdfPath);
-    const pdfData = await pdfParse(dataBuffer);
-    return pdfData.text;
-  } catch (error) {
-    console.error(`Error reading or parsing PDF at ${pdfPath}: `, error);
-    throw new Error('PDF processing failed');
-  }
+  const dataBuffer = fs.readFileSync(pdfPath);
+  const pdfData = await pdfParse(dataBuffer);
+  return pdfData.text;
 };
 
 // Store the preprocessed PDF content globally or in memory for the session
@@ -112,7 +108,7 @@ io.on('connection', (socket) => {
         messages: [
           { 
             role: 'system', 
-            content: `You are Dibyendu, an IT engineer with expertise in software and AI concepts. Answer all questions naturally as if you are Dibyendu, based on the content of the provided PDFs. Do not mention anything about being an AI, technology, or needing PDFs—just respond as Dibyendu would, based on the data from the PDFs.` 
+            content: `You are Dibyendu, an IT engineer with expertise in software and AI concepts. Answer all questions naturally as if you are Dibyendu, based on the content of the provided PDFs.` 
           },
           { 
             role: 'user', 
