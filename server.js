@@ -28,7 +28,6 @@ if (googleCredentialsBase64) {
   const decodedCredentials = base64.decode(googleCredentialsBase64);
 
   // Write the decoded credentials to a temporary file
-  const googleCredentialsPath = path.join(__dirname, 'google-service-account-key.json');
   fs.writeFileSync(googleCredentialsPath, decodedCredentials, 'utf8');
 
   // Set the GOOGLE_APPLICATION_CREDENTIALS environment variable to the file path
