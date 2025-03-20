@@ -34,7 +34,7 @@ const server = app.listen(port, () => {
 // Set up Socket.io with CORS configuration
 const io = new Server(server, {
   cors: {
-    origin: "https://voice-bot13.netlify.app/",  // Your frontend URL here
+    origin: "https://voice-bot13.netlify.app",  // Your frontend URL here
     methods: ["GET", "POST"]
   }
 });
