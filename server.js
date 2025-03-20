@@ -15,11 +15,12 @@ dotenv.config(); // Load environment variables from .env file
 const app = express();
 const port = process.env.PORT || 5001;  
 
-// Enable CORS for the frontend URL (Netlify)
+// Enable CORS for the frontend URL (Netlify) and allow credentials
 app.use(cors({
   origin: 'https://voice-bot13.netlify.app',  // Your frontend URL here
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type'],
+  credentials: true,  // Allow credentials (cookies)
 }));
 
 const googleCredentialsBase64 = process.env.GOOGLE_CREDENTIALS_BASE64;
@@ -55,12 +56,13 @@ const server = app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
 
-// Set up Socket.io with CORS configuration
+// Set up Socket.IO with CORS configuration
 const io = new Server(server, {
   cors: {
     origin: 'https://voice-bot13.netlify.app',  // Your frontend URL here
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type'],
+    credentials: true,  // Allow credentials (cookies) to be sent if necessary
   },
 });
 
