@@ -18,8 +18,7 @@ const port = process.env.PORT || 5001;
 // Enable CORS for the frontend URL (Netlify) and allow credentials
 app.use(cors({
   origin: [
-    'http://localhost:3000',  // Local frontend URL
-    'https://voice-bot13.netlify.app',  // Deployed frontend URL
+    'http://localhost:3000',  
   ],
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type'],
@@ -64,8 +63,7 @@ const server = app.listen(port, () => {
 const io = new Server(server, {
   cors: {
     origin: [
-      'http://localhost:3000',  // Local frontend URL for development
-      'https://voice-bot13.netlify.app',  // Deployed frontend URL
+      'http://localhost:3000',
     ],
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type'],
