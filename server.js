@@ -15,8 +15,11 @@ dotenv.config(); // Load environment variables from .env file
 const app = express();
 const port = process.env.PORT || 5001;  
 
-// Enable CORS for all origins (you can customize it based on your frontend's URL)
-app.use(cors());
+// Enable CORS for the frontend URL (Netlify)
+app.use(cors({
+  origin: 'https://voice-bot13.netlify.app',  // Your frontend URL here
+  methods: ['GET', 'POST'],
+}));
 
 // Set up OpenAI API client
 const openai = new OpenAI({
@@ -34,20 +37,25 @@ const server = app.listen(port, () => {
 // Set up Socket.io with CORS configuration
 const io = new Server(server, {
   cors: {
-    origin: "https://voice-bot13.netlify.app",  // Your frontend URL here
-    methods: ["GET", "POST"]
-  }
+    origin: 'https://voice-bot13.netlify.app',  // Your frontend URL here
+    methods: ['GET', 'POST'],
+  },
 });
 
-// Paths to the two PDF files
-const pdfPath1 = path.join(__dirname, 'files/sample1.pdf'); // Replace with the actual path of your first PDF file
-const pdfPath2 = path.join(__dirname, 'files/sample2.pdf'); // Replace with the actual path of your second PDF file
+// Paths to the two PDF files - Adjust as needed or set in environment variables
+const pdfPath1 = path.join(__dirname, 'files/sample1.pdf'); // Replace with your actual PDF file path
+const pdfPath2 = path.join(__dirname, 'files/sample2.pdf'); // Replace with your actual PDF file path
 
 // Helper function to preprocess PDF
 const preprocessPDF = async (pdfPath) => {
-  const dataBuffer = fs.readFileSync(pdfPath);
-  const pdfData = await pdfParse(dataBuffer);
-  return pdfData.text;
+  try {
+    const dataBuffer = fs.readFileSync(pdfPath);
+    const pdfData = await pdfParse(dataBuffer);
+    return pdfData.text;
+  } catch (error) {
+    console.error(`Error reading or parsing PDF at ${pdfPath}: `, error);
+    throw new Error('PDF processing failed');
+  }
 };
 
 // Store the preprocessed PDF content globally or in memory for the session
@@ -60,7 +68,7 @@ const initializePDFs = async () => {
     const pdfContent2 = await preprocessPDF(pdfPath2);
     // Combine the content of both PDFs
     combinedPdfContent = `${pdfContent1}\n\n${pdfContent2}`;
-    // console.log('Both PDFs preprocessed successfully.');
+    console.log('Both PDFs preprocessed successfully.');
   } catch (error) {
     console.error('Error processing PDFs:', error);
   }
@@ -85,7 +93,7 @@ const textToSpeechConversion = async (text) => {
 
 // Handle socket connections
 io.on('connection', (socket) => {
-  // console.log('a user connected');
+  console.log('a user connected');
 
   // Handle user messages
   socket.on('userMessage', async (question) => {
