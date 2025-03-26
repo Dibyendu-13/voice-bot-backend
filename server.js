@@ -22,6 +22,7 @@ app.use(cors({
   origin: [
 
     "https://voice-bot13.netlify.app",
+    "https://fdc5-43-241-193-108.ngrok-free.app"
     
     
   ],
