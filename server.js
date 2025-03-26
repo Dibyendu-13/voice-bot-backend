@@ -5,167 +5,131 @@ const pdfParse = require('pdf-parse');
 const { OpenAI } = require('openai');
 const dotenv = require('dotenv');
 const textToSpeech = require('@google-cloud/text-to-speech');
-const { Server } = require('socket.io');
-const cors = require('cors'); // Import CORS
-const base64 = require('base-64'); // Import the base64 library to decode the base64 string
+const cors = require('cors');
+const base64 = require('base-64');
 
-dotenv.config(); // Load environment variables from .env file
+dotenv.config();
 
 // Initialize Express app
 const app = express();
-const port = process.env.PORT || 5001;  
+const port = process.env.PORT || 5001;
 
-// Enable CORS for the frontend URL (Netlify) and allow credentials
+// Enable JSON body parsing
+app.use(express.json({ limit: '10mb' }));
+
+// Enable CORS for frontend (localhost and Netlify or ngrok)
 app.use(cors({
   origin: [
-    'http://localhost:3000',  // Local frontend URL
-    'https://voice-bot13.netlify.app',  // Deployed frontend URL
+    'http://localhost:3000',
+    
   ],
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type'],
-  credentials: true,  // Allow credentials (cookies)
 }));
 
-
+// Load and save Google credentials from base64 env var
 const googleCredentialsBase64 = process.env.GOOGLE_CREDENTIALS_BASE64;
-
 if (googleCredentialsBase64) {
-  // Define the path where the Google credentials will be stored temporarily
   const googleCredentialsPath = path.join(__dirname, 'google-credentials.json');
-  
-  // Decode the base64 credentials into the actual JSON content
   const decodedCredentials = base64.decode(googleCredentialsBase64);
-
-  // Write the decoded credentials to a temporary file (google-credentials.json)
   fs.writeFileSync(googleCredentialsPath, decodedCredentials, 'utf8');
-
-  // Set the GOOGLE_APPLICATION_CREDENTIALS environment variable to the file path
   process.env.GOOGLE_APPLICATION_CREDENTIALS = googleCredentialsPath;
-
-  console.log('Google credentials saved successfully.');
+  console.log('✅ Google credentials loaded.');
 } else {
-  console.error('No Google credentials found in environment variables.');
+  console.error('❌ No Google credentials found in env.');
 }
 
-// Set up OpenAI API client
+// Set up OpenAI client
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // Replace with your OpenAI API key
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Set up Google Cloud Text-to-Speech client using the service account credentials
+// Set up Google TTS client
 const client = new textToSpeech.TextToSpeechClient();
 
-// Create a server using the Express app
-const server = app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
-});
+// Preprocess PDF files on startup
+const pdfPath1 = path.join(__dirname, 'files/sample1.pdf');
+const pdfPath2 = path.join(__dirname, 'files/sample2.pdf');
 
-// Set up Socket.IO with CORS configuration
-const io = new Server(server, {
-  cors: {
-    origin: [
-      'http://localhost:3000',  // Local frontend URL for development
-      'https://voice-bot13.netlify.app',  // Deployed frontend URL
-    ],
-    methods: ['GET', 'POST'],
-    allowedHeaders: ['Content-Type'],
-    credentials: true,  // Allow credentials (cookies)
-  },
-});
+let combinedPdfContent = '';
 
-
-// Paths to the two PDF files
-const pdfPath1 = path.join(__dirname, 'files/sample1.pdf'); // Replace with your actual PDF file path
-const pdfPath2 = path.join(__dirname, 'files/sample2.pdf'); // Replace with your actual PDF file path
-
-// Helper function to preprocess PDF
 const preprocessPDF = async (pdfPath) => {
-  const dataBuffer = fs.readFileSync(pdfPath);
+  const dataBuffer = await fs.promises.readFile(pdfPath);
   const pdfData = await pdfParse(dataBuffer);
   return pdfData.text;
 };
 
-// Store the preprocessed PDF content globally or in memory for the session
-let combinedPdfContent = '';
-
-// Preprocess the two PDFs and combine their content
 const initializePDFs = async () => {
   try {
     const pdfContent1 = await preprocessPDF(pdfPath1);
     const pdfContent2 = await preprocessPDF(pdfPath2);
-    // Combine the content of both PDFs
     combinedPdfContent = `${pdfContent1}\n\n${pdfContent2}`;
-    console.log('Both PDFs preprocessed successfully.');
-  } catch (error) {
-    console.error('Error processing PDFs:', error);
+    console.log('✅ PDFs loaded and combined.');
+  } catch (err) {
+    console.error('❌ Error loading PDFs:', err);
   }
 };
 
-// Helper function to convert text to speech
+// TTS helper
 const textToSpeechConversion = async (text) => {
   const request = {
-    input: { text: text },
+    input: { text },
     voice: { languageCode: 'en-US', ssmlGender: 'NEUTRAL' },
     audioConfig: { audioEncoding: 'MP3' },
   };
 
-  try {
-    const [response] = await client.synthesizeSpeech(request);
-    return response.audioContent;
-  } catch (error) {
-    console.error('Error during text-to-speech conversion:', error);
-    throw new Error('Text-to-Speech conversion failed');
-  }
+  const [response] = await client.synthesizeSpeech(request);
+  return response.audioContent; // Buffer
 };
 
-// Handle socket connections
-io.on('connection', (socket) => {
-  console.log('a user connected');
+// POST endpoint to receive question and return response
+app.post('/ask', async (req, res) => {
+  try {
+    const { question } = req.body;
 
-  // Handle user messages
-  socket.on('userMessage', async (question) => {
-    try {
-      if (!question) {
-        return socket.emit('aiResponse', { error: 'Question is required' });
-      }
-
-      if (!combinedPdfContent) {
-        return socket.emit('aiResponse', { error: 'No PDF content available for conversation' });
-      }
-
-      // Send the combined PDF content to the LLM (OpenAI API) for the conversation
-      const aiResponse = await openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          { 
-            role: 'system', 
-            content: `You are Dibyendu, an IT engineer with expertise in software and AI concepts. Answer all questions naturally as if you are Dibyendu, based on the content of the provided PDFs.` 
-          },
-          { 
-            role: 'user', 
-            content: `Question: ${question}` 
-          },
-        ],
-      });
-
-      const textResponse = aiResponse.choices[0].message.content;
-
-      // Convert the text response to audio
-      const audioContent = await textToSpeechConversion(textResponse);
-
-      // Emit the AI response (both text and audio)
-      socket.emit('aiResponse', { text: textResponse, audio: audioContent });
-
-    } catch (error) {
-      console.error('Error during AI interaction or TTS conversion:', error);
-      socket.emit('aiResponse', { error: 'An error occurred during AI interaction or text-to-speech conversion' });
+    if (!question) {
+      return res.status(400).json({ error: 'Question is required.' });
     }
-  });
 
-  socket.on('disconnect', () => {
-    console.log('user disconnected');
-  });
+    if (!combinedPdfContent) {
+      return res.status(500).json({ error: 'PDF data not initialized.' });
+    }
+
+    const aiResponse = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [
+        {
+          role: 'system',
+          content: `You are Dibyendu, an IT engineer with expertise in software and AI concepts. Answer all questions naturally as if you are Dibyendu, based on the content of the provided PDFs.`
+        },
+        {
+          role: 'user',
+          content: `Question: ${question}`
+        },
+      ],
+    });
+
+    const textResponse = aiResponse.choices[0].message.content;
+
+    const audioBuffer = await textToSpeechConversion(textResponse);
+    const audioBase64 = audioBuffer.toString('base64');
+
+    res.json({
+      text: textResponse,
+      audio: audioBase64,
+    });
+
+  } catch (error) {
+    console.error('❌ Error:', error);
+    res.status(500).json({ error: 'Failed to process question or TTS.' });
+  }
 });
 
-// Initialize PDF content on startup
-initializePDFs();
+// Optional: health check endpoint
+app.get('/status', (_, res) => res.send('🟢 Server is running'));
+
+// Start server
+app.listen(port, () => {
+  console.log(`🚀 Server running at http://localhost:${port}`);
+  initializePDFs();
+});
