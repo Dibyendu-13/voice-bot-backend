@@ -20,7 +20,7 @@ app.use(express.json({ limit: '10mb' }));
 // Enable CORS for frontend (localhost and Netlify or ngrok)
 app.use(cors({
   origin: [
-    'http://localhost:3000',
+    "https://voice-bot13.netlify.app/"
     
   ],
   methods: ['GET', 'POST'],
