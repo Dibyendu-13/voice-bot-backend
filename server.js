@@ -8,7 +8,7 @@ const { initRAG, getContext } = require("./rag");
 require("dotenv").config();
 
 const app = express();
-const PORT = 5001;
+const PORT = process.env.PORT || 5001;
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 app.use(cors());
